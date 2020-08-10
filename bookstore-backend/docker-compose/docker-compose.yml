@@ -1,0 +1,84 @@
+version: '3.7'
+services:
+  bookstore-eureka-server-service:
+    image: afarangoz/bookstore-backend:bookstore-eureka-server-service
+    ports:
+      - "8761:8761"
+    restart: always
+    networks:
+      - bookstore-network
+  bookstore-mysql8-service:
+    image: mysql:8
+    ports:
+      - "3306:3306"
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: db_bookstore
+    networks:
+      - bookstore-network
+  bookstore-book-service:
+    image: afarangoz/bookstore-backend:bookstore-book-service
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://bookstore-mysql8-service:3306/db_bookstore?serverTimezone=UTC
+      eureka.client.enabled: 'true'
+      eureka.host: bookstore-eureka-server-service
+      eureka.instance.preferIpAddress: 'true'
+    depends_on:
+      - bookstore-eureka-server-service
+      - bookstore-mysql8-service
+    networks:
+      - bookstore-network
+  bookstore-order-service:
+    image: afarangoz/bookstore-backend:bookstore-order-service
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://bookstore-mysql8-service:3306/db_bookstore?serverTimezone=UTC
+      eureka.client.enabled: 'true'
+      eureka.host: bookstore-eureka-server-service
+      eureka.instance.preferIpAddress: 'true'
+    depends_on:
+      - bookstore-eureka-server-service
+      - bookstore-mysql8-service
+      - bookstore-book-service
+    networks:
+      - bookstore-network
+  bookstore-user-service:
+    image: afarangoz/bookstore-backend:bookstore-user-service
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://bookstore-mysql8-service:3306/db_bookstore?serverTimezone=UTC
+      eureka.client.enabled: 'true'
+      eureka.host: bookstore-eureka-server-service
+      eureka.instance.preferIpAddress: 'true'
+    depends_on:
+      - bookstore-eureka-server-service
+      - bookstore-mysql8-service
+    networks:
+      - bookstore-network
+  bookstore-zuul-gateway:
+    image: afarangoz/bookstore-backend:bookstore-zuul-gateway
+    ports:
+      - "8090:8090"
+    restart: always
+    depends_on:
+      - bookstore-eureka-server-service
+    networks:
+      - bookstore-network
+  bookstore-auth-service:
+    image: afarangoz/bookstore-backend:bookstore-auth-service
+    ports:
+      - "9100:9100"
+    restart: always
+    environment:
+      eureka.client.enabled: 'true'
+      eureka.host: bookstore-eureka-server-service
+      eureka.instance.preferIpAddress: 'true'
+    depends_on:
+      - bookstore-eureka-server-service
+      - bookstore-user-service
+    networks:
+      - bookstore-network
+networks:
+  bookstore-network:
